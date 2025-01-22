@@ -1,0 +1,10 @@
+BOT_TOKEN=your_bot_token_here
+PORT=8080
+HOST=0.0.0.0
+BASE_URL=https://######.duckdns.org
+ADMIN_IDS=[12345,344334]
+POSTGRES_USER=postgres_container
+POSTGRES_PASSWORD=postgres_container
+POSTGRES_HOST=172.18.0.2
+POSTGRES_PORT=5432
+POSTGRES_DB=postgres
