@@ -1,12 +1,12 @@
 from datetime import datetime
 from functools import wraps
 
-from config import DATABASE_PG_URL
+from config import DATABASE_LITE_URL
 from sqlalchemy import func, TIMESTAMP, Integer, text
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine, AsyncSession
 
-engine = create_async_engine(url=DATABASE_PG_URL)
+engine = create_async_engine(url=DATABASE_LITE_URL)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession)
 
 

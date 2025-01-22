@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     PORT:int
     HOST:str
     BASE_URL: str
-    ADMIN_IDS: List[int]
+    ADMIN_ID: int
     FORMAT_LOG: str = (
         "{time:YYYY-MM-DD at HH:mm:ss} | {level} | {name}:{function}:{line} - {message}"
     )
@@ -39,7 +39,7 @@ settings = Settings()
 # Инициализируем бота и диспетчер
 bot = Bot(token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
-admins = settings.ADMIN_IDS
+admin = settings.ADMIN_ID
 PORT = settings.PORT
 HOST = settings.HOST
 BASE_URL = settings.BASE_URL

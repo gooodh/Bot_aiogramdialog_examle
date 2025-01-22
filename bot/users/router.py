@@ -1,61 +1,83 @@
 from aiogram.filters import CommandObject, CommandStart
-from loguru import logger
 from aiogram.types import Message
 from aiogram.dispatcher.router import Router
+from typing import Dict, Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.fsm.state import State, StatesGroup
 
-from users.dao import UserDAO
-from users.schemas import TelegramIDModel, UserModel
-from users.utils import get_refer_id_or_none
+from aiogram_dialog import Dialog, Window, setup_dialogs, DialogManager
+from aiogram_dialog.widgets.text import Format, Const
+from aiogram_dialog.widgets.kbd import Checkbox, Button, Row, Cancel, Start
 
 user_router = Router()
 
+class MainMenu(StatesGroup):
+    START = State()
+
+class Settings(StatesGroup):
+    START = State()
+
+EXTEND_BTN_ID = "extend"
+
+async def getter(dialog_manager: DialogManager, **kwargs) -> Dict[str, Any]:
+    if dialog_manager.find(EXTEND_BTN_ID).is_checked():
+        return {
+            "extended_str": "on",
+            "extended": True,
+        }
+    else:
+        return {
+            "extended_str": "off",
+            "extended": False,
+        }
+
+main_menu = Dialog(
+    Window(
+        Format(
+            "Hello, {event.from_user.username}. \n\n"
+            "Extended mode is {extended_str}.\n"
+        ),
+        Const(
+            "Here is some additional text, which is visible only in extended mode",
+            when="extended",
+        ),
+        Row(
+            Checkbox(
+                checked_text=Const("[x] Extended mode"),
+                unchecked_text=Const("[ ] Extended mode"),
+                id=EXTEND_BTN_ID,
+            ),
+            Start(Const("Settings"), id="settings", state=Settings.START),
+        ),
+        getter=getter,
+        state=MainMenu.START
+    )
+)
+
+NOTIFICATIONS_BTN_ID = "notify"
+ADULT_BTN_ID = "adult"
+
+settings = Dialog(
+    Window(
+        Const("Settings"),
+        Checkbox(
+            checked_text=Const("[x] Send notifications"),
+            unchecked_text=Const("[ ] Send notifications"),
+            id=NOTIFICATIONS_BTN_ID,
+        ),
+        Checkbox(
+            checked_text=Const("[x] Adult mode"),
+            unchecked_text=Const("[ ] Adult mode"),
+            id=ADULT_BTN_ID,
+        ),
+        Row(
+            Cancel(),
+            Cancel(text=Const("Save"), id="save"),
+        ),
+        state=Settings.START,
+    )
+)
 
 @user_router.message(CommandStart())
-async def cmd_start(
-    message: Message, command: CommandObject, session_with_commit: AsyncSession
-):
-    try:
-        user = message.from_user
-        user_info = await UserDAO.find_one_or_none(
-            session=session_with_commit, filters=TelegramIDModel(telegram_id=user.id)
-        )
-        ref_id = get_refer_id_or_none(command_args=command.args, user_id=user.id)
-
-        if user_info is None or not user_info.telegram_id:
-            user_data = UserModel(
-                telegram_id=user.id,
-                username=user.username,
-                referral_id=ref_id,
-            )
-
-            await UserDAO.add(session=session_with_commit, values=user_data)
-            message_text = f"<b>👋 Привет, {message.from_user.full_name}!</b>"
-            if ref_id:
-                message_text += f" Вы успешно закреплены за пользователем с ID {ref_id}."
-
-            await message.answer(message_text)
-            
-        else:
-            user_data = UserModel(
-                telegram_id=user.id,
-                username=user.username,
-            )
-            await UserDAO.update(
-                session=session_with_commit,
-                filters=TelegramIDModel(telegram_id=user.id),
-                values=user_data,
-            )
-            
-            await message.answer(
-                f"<b>👋 Привет, {message.from_user.full_name} я рад что ты вернулся!</b>"
-            )
-
-    except Exception as e:
-        logger.error(
-            f"Ошибка при выполнении команды /start для пользователя {message.from_user.id}: {e}"
-        )
-        await message.answer(
-            "Произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте снова позже."
-        )
+async def start(message: Message, dialog_manager: DialogManager):
+    await dialog_manager.start(MainMenu.START, data={"event": message})
